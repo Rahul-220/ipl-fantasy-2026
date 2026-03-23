@@ -5,6 +5,7 @@ RUN apt-get update -qq && \
     build-essential \
     libsqlite3-dev \
     sqlite3 \
+    libpq-dev \
     libyaml-dev \
     curl \
     pkg-config \
@@ -12,7 +13,7 @@ RUN apt-get update -qq && \
 
 WORKDIR /app
 
-COPY Gemfile ./
+COPY Gemfile Gemfile.lock ./
 RUN bundle install
 
 COPY . .
@@ -21,4 +22,4 @@ RUN mkdir -p db/sqlite tmp/pids
 
 EXPOSE 3000
 
-CMD ["bash", "-c", "rm -f tmp/pids/server.pid && bundle exec rails db:prepare && bundle exec rails server -b 0.0.0.0"]
+CMD ["bash", "-c", "rm -f tmp/pids/server.pid && bundle exec rails db:prepare && bundle exec rails db:seed && bundle exec rails server -b 0.0.0.0"]

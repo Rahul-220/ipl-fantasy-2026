@@ -1,4 +1,11 @@
 # IPL 2026 Seed Data — Correct Squads & Schedule
+
+# Skip if already seeded (prevents duplicates on each deploy restart)
+if IplTeam.count > 0
+  puts "Database already seeded (#{IplTeam.count} teams, #{IplPlayer.count} players). Skipping."
+  return
+end
+
 puts "Seeding IPL 2026 data..."
 
 # === IPL Teams ===
