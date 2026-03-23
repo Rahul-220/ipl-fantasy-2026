@@ -1,0 +1,9 @@
+backend/tmp/
+backend/db/sqlite/
+backend/log/
+backend/storage/
+node_modules/
+frontend/node_modules/
+frontend/dist/
+.DS_Store
+*.pid
