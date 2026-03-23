@@ -22,4 +22,4 @@ RUN mkdir -p db/sqlite tmp/pids
 
 EXPOSE 3000
 
-CMD ["bash", "-c", "rm -f tmp/pids/server.pid && bundle exec rails db:prepare && bundle exec rails db:seed && bundle exec rails server -b 0.0.0.0"]
+CMD ["bash", "-c", "rm -f tmp/pids/server.pid && bundle exec rails db:prepare && bundle exec rails db:seed && bundle exec rails server -b 0.0.0.0 -p ${PORT:-3000}"]
