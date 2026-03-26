@@ -1,6 +1,10 @@
 Rails.application.routes.draw do
   namespace :api do
-    resources :users, only: [:index, :create]
+    resources :users, only: [:index, :create] do
+      collection do
+        post :login
+      end
+    end
     resources :ipl_teams, only: [:index, :show]
     resources :ipl_players, only: [:index, :create, :update, :destroy]
 
@@ -17,6 +21,9 @@ Rails.application.routes.draw do
         member do
           post :calculate_points
           post :update_status
+          post :sync_match
+          post :toggle_auto_sync
+          post :set_cricapi_id
         end
       end
     end

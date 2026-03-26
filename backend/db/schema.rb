@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[7.2].define(version: 2026_03_22_000007) do
+ActiveRecord::Schema[7.2].define(version: 2026_03_26_000002) do
   create_table "ipl_players", force: :cascade do |t|
     t.string "name", null: false
     t.integer "ipl_team_id", null: false
@@ -53,6 +53,10 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_22_000007) do
     t.string "api_match_id"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "cricapi_match_id"
+    t.datetime "last_synced_at"
+    t.boolean "auto_sync", default: false
+    t.index ["cricapi_match_id"], name: "index_matches_on_cricapi_match_id"
     t.index ["team1_id"], name: "index_matches_on_team1_id"
     t.index ["team2_id"], name: "index_matches_on_team2_id"
   end
@@ -97,6 +101,7 @@ ActiveRecord::Schema[7.2].define(version: 2026_03_22_000007) do
     t.string "name", null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.string "password_digest"
     t.index ["name"], name: "index_users_on_name", unique: true
   end
 
