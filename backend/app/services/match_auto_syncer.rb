@@ -27,15 +27,30 @@ class MatchAutoSyncer
       m.auto_update_status!
     end
 
-    # Step 2: Find matches that need monitoring (live or recently started)
-    matches_to_monitor = Match.where(auto_sync: true, status: "live")
+    # Step 2: Auto-discover Cricbuzz IDs for matches that don't have one yet
+    # Only for matches happening today or already live
+    unmapped = Match.where(status: "live")
+                    .where(cricapi_match_id: [nil, ""])
+    if unmapped.any?
+      Rails.logger.info("[AutoSync] #{unmapped.count} live match(es) missing Cricbuzz ID — running discovery...")
+      CricbuzzScraper.auto_map_matches!
+
+      # Enable auto_sync for any newly-mapped matches
+      Match.where(status: "live")
+           .where.not(cricapi_match_id: [nil, ""])
+           .where(auto_sync: false)
+           .update_all(auto_sync: true)
+    end
+
+    # Step 3: Find ALL live matches with a Cricbuzz ID (auto_sync is set automatically)
+    matches_to_monitor = Match.where(status: "live")
+                              .where.not(cricapi_match_id: [nil, ""])
 
     return if matches_to_monitor.empty?
 
     Rails.logger.info("[AutoSync] Monitoring #{matches_to_monitor.count} live match(es)")
 
     matches_to_monitor.each do |match|
-      next unless match.cricapi_match_id.present?
 
       # Check match status on Cricbuzz (lightweight scrape)
       status = CricbuzzScraper.fetch_match_status(match.cricapi_match_id)
