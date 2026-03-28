@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { getMatches, getMatch, getTeams, getPerformances, savePerformance, calculatePoints, updateMatchStatus, createMatch } from '../api';
+import { getMatches, getMatch, getTeams, getPerformances, savePerformance, calculatePoints, updateMatchStatus, createMatch, syncMatch, toggleAutoSync } from '../api';
 
 function Admin() {
   const [matches, setMatches] = useState([]);
@@ -10,6 +10,8 @@ function Admin() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [showAddMatch, setShowAddMatch] = useState(false);
+  const [syncLog, setSyncLog] = useState([]);
+  const [syncing, setSyncing] = useState(false);
   const [newMatch, setNewMatch] = useState({
     team1_id: '', team2_id: '', match_date: '', venue: '', match_number: ''
   });
@@ -24,6 +26,7 @@ function Admin() {
     setShowAddMatch(false);
     setLoading(true);
     setMessage('');
+    setSyncLog([]);
     try {
       const [matchRes, perfRes] = await Promise.all([
         getMatch(matchId),
@@ -127,6 +130,38 @@ function Admin() {
     }
   };
 
+  const handleSyncMatch = async () => {
+    setSyncing(true);
+    setSyncLog(['🔄 Syncing from CricAPI...']);
+    setMessage('');
+    try {
+      const res = await syncMatch(selectedMatchId);
+      setSyncLog(res.data.log || []);
+      if (res.data.success) {
+        setMessage(`✅ Synced! ${res.data.performances} performances updated.`);
+        // Reload match data and performances
+        loadMatch(selectedMatchId);
+        getMatches().then(r => setMatches(r.data));
+      } else {
+        setMessage('⚠️ Sync completed with issues — check log below.');
+      }
+    } catch (err) {
+      setSyncLog(['❌ Sync failed: ' + (err.response?.data?.error || err.message)]);
+      setMessage('Error syncing match');
+    }
+    setSyncing(false);
+  };
+
+  const handleToggleAutoSync = async () => {
+    try {
+      const res = await toggleAutoSync(selectedMatchId);
+      setMessage(res.data.message);
+      getMatches().then(r => setMatches(r.data));
+    } catch (err) {
+      setMessage('Error toggling auto-sync');
+    }
+  };
+
   const handleAddMatch = async (e) => {
     e.preventDefault();
     try {
@@ -145,6 +180,8 @@ function Admin() {
     const labels = { batsman: 'BAT', bowler: 'BOWL', all_rounder: 'AR', wicket_keeper: 'WK' };
     return labels[role] || role;
   };
+
+  const getSelectedMatch = () => matches.find(m => m.id === selectedMatchId);
 
   return (
     <div className="admin-page">
@@ -172,7 +209,10 @@ function Admin() {
               >
                 <span className="admin-match-num">#{m.match_number}</span>
                 <span>{m.team1.short_name} vs {m.team2.short_name}</span>
-                <span className={`status-dot status-${m.status}`}></span>
+                <span style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  {m.auto_sync && <span title="Auto-sync enabled" style={{ fontSize: '10px' }}>🔄</span>}
+                  <span className={`status-dot status-${m.status}`}></span>
+                </span>
               </button>
             ))}
           </div>
@@ -289,9 +329,52 @@ function Admin() {
                     <option value="completed">Completed</option>
                   </select>
                   <button className="btn-primary" onClick={handleCalculatePoints}>
-                    🔄 Calculate Fantasy Points
+                    🔢 Calculate Points
                   </button>
                 </div>
+              </div>
+
+              {/* CricAPI Sync Controls */}
+              <div className="sync-controls">
+                <div className="sync-header">
+                  <h3>📡 Live API Sync</h3>
+                  <div className="sync-status">
+                    {getSelectedMatch()?.last_synced_at && (
+                      <span className="sync-time">
+                        Last sync: {new Date(getSelectedMatch().last_synced_at).toLocaleTimeString()}
+                      </span>
+                    )}
+                    {getSelectedMatch()?.cricapi_match_id && (
+                      <span className="sync-id" title={getSelectedMatch().cricapi_match_id}>
+                        🔗 Linked
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="sync-actions">
+                  <button
+                    className={`btn-sync ${syncing ? 'syncing' : ''}`}
+                    onClick={handleSyncMatch}
+                    disabled={syncing}
+                  >
+                    {syncing ? '🔄 Syncing...' : '📥 Sync from CricAPI'}
+                  </button>
+                  <button
+                    className={`btn-auto-sync ${getSelectedMatch()?.auto_sync ? 'active' : ''}`}
+                    onClick={handleToggleAutoSync}
+                  >
+                    {getSelectedMatch()?.auto_sync ? '⏸️ Auto-Sync ON' : '▶️ Auto-Sync OFF'}
+                  </button>
+                </div>
+
+                {/* Sync Log */}
+                {syncLog.length > 0 && (
+                  <div className="sync-log">
+                    {syncLog.map((line, i) => (
+                      <div key={i} className="sync-log-line">{line}</div>
+                    ))}
+                  </div>
+                )}
               </div>
 
               <div className="performance-table-wrapper">
@@ -359,7 +442,7 @@ function Admin() {
                             onChange={e => updateField(player.id, 'direct_run_outs', parseInt(e.target.value) || 0)} /></td>
                           <td><input type="number" min="0" className="perf-input sm" value={perf.indirect_run_outs || 0}
                             onChange={e => updateField(player.id, 'indirect_run_outs', parseInt(e.target.value) || 0)} /></td>
-                          <td className="points-cell">{perf.fantasy_points?.toFixed(1) || '—'}</td>
+                          <td className="points-cell">{parseFloat(perf.fantasy_points)?.toFixed(1) || '—'}</td>
                           <td>
                             <button className="btn-save-sm" onClick={() => savePlayerPerformance(player.id)}>💾</button>
                           </td>

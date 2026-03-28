@@ -11,7 +11,8 @@ const api = axios.create({
 
 // Users
 export const getUsers = () => api.get('/users');
-export const createUser = (name) => api.post('/users', { name });
+export const createUser = (name, password) => api.post('/users', { name, password });
+export const loginUser = (name, password) => api.post('/users/login', { name, password });
 
 // Teams
 export const getTeams = () => api.get('/ipl_teams');
@@ -40,6 +41,9 @@ export const updatePerformance = (matchId, perfId, data) => api.put(`/admin/matc
 export const calculatePoints = (matchId) => api.post(`/admin/matches/${matchId}/calculate_points`);
 export const updateMatchStatus = (matchId, status) => api.post(`/admin/matches/${matchId}/update_status`, { status });
 export const createMatch = (data) => api.post('/admin/matches', data);
+export const syncMatch = (matchId) => api.post(`/admin/matches/${matchId}/sync_match`);
+export const toggleAutoSync = (matchId) => api.post(`/admin/matches/${matchId}/toggle_auto_sync`);
+export const setCricapiId = (matchId, cricapiId) => api.post(`/admin/matches/${matchId}/set_cricapi_id`, { cricapi_match_id: cricapiId });
 
 // Leaderboard
 export const getLeaderboard = () => api.get('/leaderboard');

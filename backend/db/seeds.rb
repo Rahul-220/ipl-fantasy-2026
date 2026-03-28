@@ -351,9 +351,9 @@ puts "  #{matches_data.size} matches seeded (official BCCI schedule, remaining T
 
 # === Create default users ===
 User.destroy_all
-%w[Naveen Nithish Rahul].each do |name|
-  User.find_or_create_by!(name: name)
+{ "Naveen" => "naveen123", "Nithish" => "nithish123", "Rahul" => "rahul123" }.each do |name, pwd|
+  User.create!(name: name, password: pwd)
 end
-puts "  3 default users seeded"
+puts "  3 default users seeded (with passwords)"
 
 puts "Done! Seeded #{IplTeam.count} teams, #{IplPlayer.count} players, #{Match.count} matches, #{User.count} users."

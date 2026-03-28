@@ -1,6 +1,6 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
-import { getUsers, createUser } from './api';
+import { getUsers, loginUser, createUser } from './api';
 import Home from './pages/Home';
 import MatchDetail from './pages/MatchDetail';
 import TeamPicker from './pages/TeamPicker';
@@ -40,26 +40,46 @@ function NavBar() {
   );
 }
 
-function UserSelector() {
-  const [users, setUsers] = useState([]);
-  const [newName, setNewName] = useState('');
+function LoginScreen() {
   const { setCurrentUser } = useContext(UserContext);
+  const [mode, setMode] = useState('login'); // 'login' or 'signup'
+  const [name, setName] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    getUsers().then(res => setUsers(res.data));
-  }, []);
-
-  const handleSelect = (user) => {
-    setCurrentUser(user);
-    localStorage.setItem('fantasyUser', JSON.stringify(user));
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    if (!name.trim() || !password.trim()) return;
+    setError('');
+    setLoading(true);
+    try {
+      const res = await loginUser(name.trim(), password);
+      setCurrentUser(res.data);
+      localStorage.setItem('fantasyUser', JSON.stringify(res.data));
+    } catch (err) {
+      setError(err.response?.data?.error || 'Login failed');
+    }
+    setLoading(false);
   };
 
-  const handleCreate = async (e) => {
+  const handleSignup = async (e) => {
     e.preventDefault();
-    if (!newName.trim()) return;
-    const res = await createUser(newName.trim());
-    setCurrentUser(res.data);
-    localStorage.setItem('fantasyUser', JSON.stringify(res.data));
+    if (!name.trim() || !password.trim()) return;
+    if (password.length < 4) {
+      setError('Password must be at least 4 characters');
+      return;
+    }
+    setError('');
+    setLoading(true);
+    try {
+      const res = await createUser(name.trim(), password);
+      setCurrentUser(res.data);
+      localStorage.setItem('fantasyUser', JSON.stringify(res.data));
+    } catch (err) {
+      setError(err.response?.data?.errors?.join(', ') || 'Signup failed');
+    }
+    setLoading(false);
   };
 
   return (
@@ -71,34 +91,47 @@ function UserSelector() {
           <p>Pick your players. Outscore your friends.</p>
         </div>
 
-        {users.length > 0 && (
-          <div className="existing-users">
-            <h3>Continue as</h3>
-            <div className="user-grid">
-              {users.map(user => (
-                <button key={user.id} className="user-btn" onClick={() => handleSelect(user)}>
-                  <span className="user-btn-avatar">{user.name[0]}</span>
-                  <span>{user.name}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="login-tabs">
+          <button
+            className={`login-tab ${mode === 'login' ? 'active' : ''}`}
+            onClick={() => { setMode('login'); setError(''); }}
+          >
+            Log In
+          </button>
+          <button
+            className={`login-tab ${mode === 'signup' ? 'active' : ''}`}
+            onClick={() => { setMode('signup'); setError(''); }}
+          >
+            Sign Up
+          </button>
+        </div>
 
-        <div className="divider"><span>or</span></div>
+        {error && <div className="login-error">{error}</div>}
 
-        <form onSubmit={handleCreate} className="new-user-form">
-          <h3>Join as new player</h3>
-          <div className="input-group">
+        <form onSubmit={mode === 'login' ? handleLogin : handleSignup} className="login-form">
+          <div className="login-field">
+            <label>Name</label>
             <input
               type="text"
-              value={newName}
-              onChange={e => setNewName(e.target.value)}
+              value={name}
+              onChange={e => setName(e.target.value)}
               placeholder="Enter your name"
               maxLength={20}
+              autoFocus
             />
-            <button type="submit" className="btn-primary">Join</button>
           </div>
+          <div className="login-field">
+            <label>Password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder={mode === 'login' ? 'Enter password' : 'Create a password'}
+            />
+          </div>
+          <button type="submit" className="btn-primary login-submit" disabled={loading}>
+            {loading ? '...' : mode === 'login' ? 'Log In' : 'Create Account'}
+          </button>
         </form>
       </div>
     </div>
@@ -114,7 +147,7 @@ function App() {
   if (!currentUser) {
     return (
       <UserContext.Provider value={{ currentUser, setCurrentUser }}>
-        <UserSelector />
+        <LoginScreen />
       </UserContext.Provider>
     );
   }

@@ -17,27 +17,7 @@ class Api::Admin::MatchesController < ApplicationController
 
   def calculate_points
     @match = Match.find(params[:id])
-
-    @match.match_entries.includes(:team_selections, :captain, :vice_captain).each do |entry|
-      total = 0.0
-
-      entry.team_selections.each do |selection|
-        perf = PlayerMatchPerformance.find_by(match_id: @match.id, ipl_player_id: selection.ipl_player_id)
-        next unless perf
-
-        points = perf.fantasy_points.to_f
-
-        if entry.captain_id == selection.ipl_player_id
-          points *= 2.0
-        elsif entry.vice_captain_id == selection.ipl_player_id
-          points *= 1.5
-        end
-
-        total += points
-      end
-
-      entry.update!(total_points: total)
-    end
+    PointsCalculator.new(@match).calculate_all!
 
     render json: {
       message: "Points calculated successfully",
@@ -51,10 +31,41 @@ class Api::Admin::MatchesController < ApplicationController
   def update_status
     @match = Match.find(params[:id])
     if @match.update(status: params[:status])
-      render json: @match
+      render json: @match.as_json(methods: [:cricapi_match_id, :last_synced_at, :auto_sync])
     else
       render json: { errors: @match.errors.full_messages }, status: :unprocessable_entity
     end
+  end
+
+  # POST /api/admin/matches/:id/sync — manually trigger a sync from CricAPI
+  def sync_match
+    @match = Match.find(params[:id])
+    syncer = MatchSyncService.new(@match)
+    result = syncer.sync!
+
+    render json: {
+      success: result[:success],
+      log: result[:log],
+      performances: result[:performances] || 0,
+      match: @match.reload.as_json(methods: [:cricapi_match_id, :last_synced_at, :auto_sync])
+    }
+  end
+
+  # POST /api/admin/matches/:id/toggle_auto_sync
+  def toggle_auto_sync
+    @match = Match.find(params[:id])
+    @match.update!(auto_sync: !@match.auto_sync)
+    render json: {
+      auto_sync: @match.auto_sync,
+      message: @match.auto_sync ? "Auto-sync enabled (every 5 min)" : "Auto-sync disabled"
+    }
+  end
+
+  # POST /api/admin/matches/:id/set_cricapi_id
+  def set_cricapi_id
+    @match = Match.find(params[:id])
+    @match.update!(cricapi_match_id: params[:cricapi_match_id])
+    render json: { cricapi_match_id: @match.cricapi_match_id, message: "CricAPI ID updated" }
   end
 
   private

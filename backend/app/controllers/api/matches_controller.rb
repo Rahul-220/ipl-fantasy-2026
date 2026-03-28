@@ -6,7 +6,7 @@ class Api::MatchesController < ApplicationController
         team1: { only: [:id, :name, :short_name, :logo_url] },
         team2: { only: [:id, :name, :short_name, :logo_url] }
       },
-      methods: [:full?]
+      methods: [:full?, :cricapi_match_id, :last_synced_at, :auto_sync]
     ).map { |m| m.merge("entries_count" => Match.find(m["id"]).match_entries.count) }
   end
 
