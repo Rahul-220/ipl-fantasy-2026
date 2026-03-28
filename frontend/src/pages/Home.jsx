@@ -90,10 +90,17 @@ function Home() {
                 <Link to={`/matches/${match.id}`} key={match.id} className="match-card">
                   <div className="match-card-header">
                     <span className="match-number">Match {match.match_number}</span>
-                    <span className={`status-badge ${getStatusClass(match.status)}`}>
-                      {match.status === 'live' && <span className="live-dot"></span>}
-                      {match.status}
-                    </span>
+                    {(() => {
+                      const started = match.status !== 'upcoming' || new Date(match.match_date) <= new Date();
+                      const displayStatus = started && match.status === 'upcoming' ? 'live' : match.status;
+                      const displayLabel = started && match.status === 'upcoming' ? 'started' : match.status;
+                      return (
+                        <span className={`status-badge ${getStatusClass(displayStatus)}`}>
+                          {(displayStatus === 'live') && <span className="live-dot"></span>}
+                          {displayLabel}
+                        </span>
+                      );
+                    })()}
                   </div>
 
                   <div className="match-teams">

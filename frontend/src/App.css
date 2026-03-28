@@ -1545,6 +1545,81 @@ body {
 
 .lb-name { font-weight: 600; }
 
+.expandable-row:hover td {
+  background: rgba(99, 102, 241, 0.04);
+}
+
+.expand-icon {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 4px;
+  transition: transform 0.2s;
+}
+
+.breakdown-row td {
+  padding: 0 !important;
+  background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.match-breakdown {
+  padding: 16px 20px 20px;
+}
+
+.breakdown-header {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-muted);
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.breakdown-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.breakdown-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-main);
+  text-decoration: none;
+  color: var(--text-primary);
+  transition: all 0.2s;
+  font-size: 13px;
+  min-width: 180px;
+}
+
+.breakdown-card:hover {
+  border-color: var(--primary);
+  background: rgba(99, 102, 241, 0.06);
+  transform: translateY(-1px);
+}
+
+.breakdown-match-num {
+  font-weight: 700;
+  color: var(--primary);
+  font-size: 12px;
+  min-width: 28px;
+}
+
+.breakdown-label {
+  flex: 1;
+  font-weight: 500;
+}
+
+.breakdown-points {
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
 /* ====== EMPTY STATE ====== */
 .empty-state {
   text-align: center;

@@ -19,12 +19,16 @@ Rails.application.routes.draw do
     namespace :admin do
       resources :matches, only: [:create] do
         resources :performances, controller: "performances", only: [:index, :create, :update]
+        collection do
+          post :discover_matches
+        end
         member do
           post :calculate_points
           post :update_status
           post :sync_match
           post :toggle_auto_sync
           post :set_cricapi_id
+          get :check_status
         end
       end
     end

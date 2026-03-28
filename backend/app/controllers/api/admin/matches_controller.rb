@@ -65,7 +65,24 @@ class Api::Admin::MatchesController < ApplicationController
   def set_cricapi_id
     @match = Match.find(params[:id])
     @match.update!(cricapi_match_id: params[:cricapi_match_id])
-    render json: { cricapi_match_id: @match.cricapi_match_id, message: "CricAPI ID updated" }
+    render json: { cricapi_match_id: @match.cricapi_match_id, message: "Cricbuzz ID updated" }
+  end
+
+  # POST /api/admin/matches/discover — auto-discover IPL matches from Cricbuzz
+  def discover_matches
+    log = CricbuzzScraper.auto_map_matches!
+    render json: { log: log }
+  end
+
+  # GET /api/admin/matches/:id/check_status — check live status from Cricbuzz
+  def check_status
+    @match = Match.find(params[:id])
+    unless @match.cricapi_match_id.present?
+      return render json: { error: "No Cricbuzz ID set" }, status: :unprocessable_entity
+    end
+
+    status = CricbuzzScraper.fetch_match_status(@match.cricapi_match_id)
+    render json: { status: status }
   end
 
   private

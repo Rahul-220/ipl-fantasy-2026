@@ -32,7 +32,7 @@ function MatchDetail() {
   const { match, entries, entries_count, is_full } = matchData;
   const userEntry = entries.find(e => e.user?.id === currentUser?.id);
   const userHasEntry = !!userEntry;
-  const matchStarted = match.status !== 'upcoming';
+  const matchStarted = match.status !== 'upcoming' || new Date(match.match_date) <= new Date();
 
   const handleWithdraw = async () => {
     if (!window.confirm('Withdraw your team? You can re-pick before the match starts.')) return;
@@ -88,19 +88,19 @@ function MatchDetail() {
           <span>📅 {formatDate(match.match_date)}</span>
           <span>📍 {match.venue}</span>
         </div>
-        <span className={`status-badge status-${match.status}`}>
-          {match.status === 'live' && <span className="live-dot"></span>}
-          {match.status}
+        <span className={`status-badge status-${matchStarted && match.status === 'upcoming' ? 'live' : match.status}`}>
+          {(match.status === 'live' || (matchStarted && match.status === 'upcoming')) && <span className="live-dot"></span>}
+          {matchStarted && match.status === 'upcoming' ? 'started' : match.status}
         </span>
       </div>
 
       {/* Join / Pick Team CTA */}
-      {match.status === 'upcoming' && !userHasEntry && !is_full && (
+      {!matchStarted && !userHasEntry && !is_full && (
         <button className="btn-cta" onClick={() => navigate(`/matches/${id}/pick`)}>
           🏏 Pick Your Team & Join
         </button>
       )}
-      {userHasEntry && match.status === 'upcoming' && (
+      {userHasEntry && !matchStarted && (
         <div className="info-banner info-success" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span>✅ You've picked your team! Teams will be revealed once the match starts.</span>
           <button className="btn-withdraw" onClick={handleWithdraw}>🔄 Withdraw & Re-pick</button>

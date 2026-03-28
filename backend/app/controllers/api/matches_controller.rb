@@ -1,19 +1,22 @@
 class Api::MatchesController < ApplicationController
   def index
     @matches = Match.includes(:team1, :team2).order(:match_date)
+
+    # Auto-update statuses based on time
+    @matches.each { |m| m.auto_update_status! }
     render json: @matches.as_json(
       include: {
         team1: { only: [:id, :name, :short_name, :logo_url] },
         team2: { only: [:id, :name, :short_name, :logo_url] }
       },
-      methods: [:full?, :cricapi_match_id, :last_synced_at, :auto_sync]
+      methods: [:full?, :started?, :cricapi_match_id, :last_synced_at, :auto_sync]
     ).map { |m| m.merge("entries_count" => Match.find(m["id"]).match_entries.count) }
   end
 
   def show
     @match = Match.includes(:team1, :team2, match_entries: [:user, :captain, :vice_captain, :selected_players]).find(params[:id])
     players = @match.players.order(:name)
-    match_started = @match.status != "upcoming"
+    match_started = @match.started?
     current_user_id = params[:user_id].present? ? params[:user_id].to_i : nil
 
     entries_json = @match.match_entries.map do |entry|

@@ -1,11 +1,8 @@
-# Start the auto-syncer in production when server boots
-# Only runs if CRICAPI_KEY is set
+# Start the auto-syncer when server boots
+# No API key needed — uses Cricbuzz scraping
 if defined?(Rails::Server) || defined?(Puma)
   Rails.application.config.after_initialize do
-    if ENV["CRICAPI_KEY"].present?
-      MatchAutoSyncer.start!
-    else
-      Rails.logger.info("[AutoSync] CRICAPI_KEY not set — auto-sync disabled")
-    end
+    MatchAutoSyncer.start!
+    Rails.logger.info("[AutoSync] Auto-syncer started (Cricbuzz scraping)")
   end
 end

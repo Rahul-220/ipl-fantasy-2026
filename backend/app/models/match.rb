@@ -11,6 +11,20 @@ class Match < ApplicationRecord
   scope :completed, -> { where(status: "completed").order(match_date: :desc) }
   scope :ordered, -> { order(:match_date) }
 
+  # Time-based locking: returns true if match time has passed OR status is not upcoming
+  def started?
+    status != "upcoming" || (match_date.present? && Time.current >= match_date)
+  end
+
+  # Auto-update status based on current time
+  def auto_update_status!
+    return unless match_date.present?
+
+    if status == "upcoming" && Time.current >= match_date
+      update!(status: "live")
+    end
+  end
+
   def players
     IplPlayer.where(ipl_team_id: [team1_id, team2_id])
   end

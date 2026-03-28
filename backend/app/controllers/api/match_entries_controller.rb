@@ -2,7 +2,7 @@ class Api::MatchEntriesController < ApplicationController
   def index
     @match = Match.find(params[:match_id])
     @entries = @match.match_entries.includes(:user, :captain, :vice_captain, :selected_players)
-    match_started = @match.status != "upcoming"
+    match_started = @match.started?
     current_user_id = params[:user_id].present? ? params[:user_id].to_i : nil
 
     entries_json = @entries.map do |entry|
@@ -33,7 +33,7 @@ class Api::MatchEntriesController < ApplicationController
   def create
     @match = Match.find(params[:match_id])
 
-    if @match.status != "upcoming"
+    if @match.started?
       return render json: { error: "Cannot join a match that has already started or completed" }, status: :unprocessable_entity
     end
 
@@ -93,7 +93,7 @@ class Api::MatchEntriesController < ApplicationController
     @match = Match.find(params[:match_id])
     @entry = @match.match_entries.find(params[:id])
 
-    if @match.status != "upcoming"
+    if @match.started?
       return render json: { error: "Cannot withdraw after match has started" }, status: :unprocessable_entity
     end
 
