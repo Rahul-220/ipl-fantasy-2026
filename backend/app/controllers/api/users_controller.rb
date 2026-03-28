@@ -21,4 +21,18 @@ class Api::UsersController < ApplicationController
       render json: { error: "Invalid name or password" }, status: :unauthorized
     end
   end
+
+  # One-time endpoint to set passwords for legacy users
+  def reset_passwords
+    defaults = { "Naveen" => "naveen123", "Nithish" => "nithish123", "Rahul" => "rahul123" }
+    updated = []
+    defaults.each do |name, pwd|
+      user = User.find_by(name: name)
+      if user
+        user.update!(password: pwd)
+        updated << name
+      end
+    end
+    render json: { message: "Passwords reset for: #{updated.join(', ')}" }
+  end
 end

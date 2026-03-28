@@ -3,6 +3,7 @@ Rails.application.routes.draw do
     resources :users, only: [:index, :create] do
       collection do
         post :login
+        post :reset_passwords
       end
     end
     resources :ipl_teams, only: [:index, :show]
