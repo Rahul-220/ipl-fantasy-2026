@@ -84,44 +84,85 @@ class MatchSyncService
         add_log("  🎳 #{player.name}: #{perf[:wickets]}/#{perf[:runs_conceded]} (#{perf[:overs_bowled]}ov)")
       end
 
-      # Process fielding (catches from batting dismissals)
+      # Process fielding from batting dismissals (parse names from outDesc)
       bat_data.each do |_key, bat|
         next unless bat["wicketCode"].present?
         wkt_code = (bat["wicketCode"] || "").upcase
+        out_desc = bat["outDesc"] || ""
 
-        # Catches
-        if %w[CAUGHT CAUGHT_BEHIND].include?(wkt_code) && bat["fielderId1"].present? && bat["fielderId1"] != 0
-          fielder = find_player_by_cricbuzz_id(bat["fielderId1"], all_players, player_name_map)
-          if fielder
-            perf = performance_data[fielder.id] ||= default_performance(fielder.id)
-            perf[:catches] += 1
+        # Catches: "c FielderName b BowlerName" or "c &amp; b BowlerName"
+        if %w[CAUGHT CAUGHT_BEHIND].include?(wkt_code)
+          if out_desc =~ /c\s*&amp;\s*b\s+(.+)/i || out_desc =~ /c\s*&\s*b\s+(.+)/i
+            # Caught and bowled — fielder is the bowler
+            fielder = find_player($1.strip, player_name_map)
+            if fielder
+              perf = performance_data[fielder.id] ||= default_performance(fielder.id)
+              perf[:catches] += 1
+              add_log("  🧤 Catch (c&b): #{fielder.name}")
+            end
+          elsif out_desc =~ /c\s+(.+?)\s+b\s+/i
+            fielder = find_player($1.strip, player_name_map)
+            if fielder
+              perf = performance_data[fielder.id] ||= default_performance(fielder.id)
+              perf[:catches] += 1
+              add_log("  🧤 Catch: #{fielder.name}")
+            end
           end
         end
 
-        # Stumpings
-        if wkt_code == "STUMPED" && bat["fielderId1"].present? && bat["fielderId1"] != 0
-          fielder = find_player_by_cricbuzz_id(bat["fielderId1"], all_players, player_name_map)
+        # Stumpings: "st FielderName b BowlerName"
+        if wkt_code == "STUMPED" && out_desc =~ /st\s+(.+?)\s+b\s+/i
+          fielder = find_player($1.strip, player_name_map)
           if fielder
             perf = performance_data[fielder.id] ||= default_performance(fielder.id)
             perf[:stumpings] += 1
+            add_log("  🧤 Stumping: #{fielder.name}")
           end
         end
 
-        # Run outs
-        if wkt_code == "RUN_OUT" && bat["fielderId1"].present? && bat["fielderId1"] != 0
-          fielder = find_player_by_cricbuzz_id(bat["fielderId1"], all_players, player_name_map)
-          if fielder
-            perf = performance_data[fielder.id] ||= default_performance(fielder.id)
-            perf[:direct_run_outs] += 1
+        # Run outs: "run out (Name1)" or "run out (Name1/Name2)"
+        if %w[RUN_OUT RUNOUT].include?(wkt_code) && out_desc =~ /run\s+out\s*\(([^)]+)\)/i
+          names = $1.split("/").map(&:strip)
+          if names.length == 1
+            # Solo run out = direct
+            fielder = find_player(names[0], player_name_map)
+            if fielder
+              perf = performance_data[fielder.id] ||= default_performance(fielder.id)
+              perf[:direct_run_outs] += 1
+              add_log("  🧤 Direct run out: #{fielder.name}")
+            end
+          else
+            # Multiple names: first = thrower (direct), second = indirect
+            fielder1 = find_player(names[0], player_name_map)
+            if fielder1
+              perf = performance_data[fielder1.id] ||= default_performance(fielder1.id)
+              perf[:direct_run_outs] += 1
+              add_log("  🧤 Direct run out: #{fielder1.name}")
+            end
+            fielder2 = find_player(names[1], player_name_map)
+            if fielder2
+              perf = performance_data[fielder2.id] ||= default_performance(fielder2.id)
+              perf[:indirect_run_outs] += 1
+              add_log("  🧤 Indirect run out: #{fielder2.name}")
+            end
           end
         end
 
-        # LBW/Bowled bonus for bowler
-        if %w[LBW BOWLED].include?(wkt_code) && bat["bowlerId"].present?
-          bowler = find_player_by_cricbuzz_id(bat["bowlerId"], all_players, player_name_map)
-          if bowler
-            perf = performance_data[bowler.id] ||= default_performance(bowler.id)
-            perf[:lbw_bowled_count] += 1
+        # LBW/Bowled bonus: parse bowler name from outDesc
+        if %w[LBW BOWLED].include?(wkt_code)
+          bowler_name = nil
+          if out_desc =~ /\bb\s+(.+)/i
+            bowler_name = $1.strip
+          elsif out_desc =~ /lbw\s+b\s+(.+)/i
+            bowler_name = $1.strip
+          end
+          if bowler_name
+            bowler = find_player(bowler_name, player_name_map)
+            if bowler
+              perf = performance_data[bowler.id] ||= default_performance(bowler.id)
+              perf[:lbw_bowled_count] += 1
+              add_log("  🎳 LBW/Bowled bonus: #{bowler.name}")
+            end
           end
         end
       end
@@ -210,12 +251,6 @@ class MatchSyncService
     nil
   end
 
-  def find_player_by_cricbuzz_id(cricbuzz_player_id, all_players, player_name_map)
-    # Cricbuzz uses numeric player IDs — we don't store these, so we can't match directly
-    # This is a limitation; fielding stats may be incomplete
-    # In future, we could add a cricbuzz_id field to IplPlayer
-    nil
-  end
 
   def default_performance(player_id)
     {
