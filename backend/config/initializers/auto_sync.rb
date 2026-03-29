@@ -1,8 +1,10 @@
-# Start the auto-syncer when server boots
-# No API key needed — uses Cricbuzz scraping
-if defined?(Rails::Server) || defined?(Puma)
-  Rails.application.config.after_initialize do
-    MatchAutoSyncer.start!
-    Rails.logger.info("[AutoSync] Auto-syncer started (Cricbuzz scraping)")
-  end
-end
+# Auto-syncer disabled — using manual sync via admin UI instead.
+# Render free tier only has one process; background threads
+# compete for resources and cause API slowness.
+#
+# To re-enable in future (paid Render or always-on server):
+#   if defined?(Rails::Server) || defined?(Puma)
+#     Rails.application.config.after_initialize do
+#       MatchAutoSyncer.start!
+#     end
+#   end

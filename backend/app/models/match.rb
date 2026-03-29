@@ -16,12 +16,12 @@ class Match < ApplicationRecord
     status != "upcoming" || (match_date.present? && Time.current >= match_date)
   end
 
-  # Auto-update status based on current time
+  # Auto-update status based on current time (only writes if needed)
   def auto_update_status!
     return unless match_date.present?
 
     if status == "upcoming" && Time.current >= match_date
-      update!(status: "live")
+      update_column(:status, "live")  # Faster than update! — skips callbacks/validations
     end
   end
 

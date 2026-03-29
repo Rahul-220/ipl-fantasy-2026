@@ -4,13 +4,17 @@ class Api::MatchesController < ApplicationController
 
     # Auto-update statuses based on time
     @matches.each { |m| m.auto_update_status! }
+
+    # Pre-load entries count in a single query (avoids N+1)
+    entries_counts = MatchEntry.group(:match_id).count
+
     render json: @matches.as_json(
       include: {
         team1: { only: [:id, :name, :short_name, :logo_url] },
         team2: { only: [:id, :name, :short_name, :logo_url] }
       },
       methods: [:full?, :started?, :cricapi_match_id, :last_synced_at, :auto_sync]
-    ).map { |m| m.merge("entries_count" => Match.find(m["id"]).match_entries.count) }
+    ).map { |m| m.merge("entries_count" => entries_counts[m["id"]] || 0) }
   end
 
   def show
@@ -18,6 +22,9 @@ class Api::MatchesController < ApplicationController
     players = @match.players.order(:name)
     match_started = @match.started?
     current_user_id = params[:user_id].present? ? params[:user_id].to_i : nil
+
+    # Pre-load all performances for this match (single query, reused for all entries)
+    performances = PlayerMatchPerformance.where(match_id: @match.id).index_by(&:ipl_player_id)
 
     entries_json = @match.match_entries.map do |entry|
       base = {
@@ -30,9 +37,6 @@ class Api::MatchesController < ApplicationController
       if match_started || entry.user_id == current_user_id
         base[:captain] = entry.captain ? { id: entry.captain.id, name: entry.captain.name } : nil
         base[:vice_captain] = entry.vice_captain ? { id: entry.vice_captain.id, name: entry.vice_captain.name } : nil
-
-        # Build player list with performance breakdown
-        performances = PlayerMatchPerformance.where(match_id: @match.id).index_by(&:ipl_player_id)
 
         base[:selected_players] = entry.selected_players.map { |p|
           perf = performances[p.id]
