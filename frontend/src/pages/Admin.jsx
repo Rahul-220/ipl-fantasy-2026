@@ -132,7 +132,7 @@ function Admin() {
 
   const handleSyncMatch = async () => {
     setSyncing(true);
-    setSyncLog(['🔄 Syncing from CricAPI...']);
+    setSyncLog(['🔄 Syncing scorecard from Cricbuzz...']);
     setMessage('');
     try {
       const res = await syncMatch(selectedMatchId);
@@ -334,19 +334,23 @@ function Admin() {
                 </div>
               </div>
 
-              {/* CricAPI Sync Controls */}
+              {/* Cricbuzz Sync Controls */}
               <div className="sync-controls">
                 <div className="sync-header">
-                  <h3>📡 Live API Sync</h3>
+                  <h3>📡 Cricbuzz Scorecard Sync</h3>
                   <div className="sync-status">
                     {getSelectedMatch()?.last_synced_at && (
                       <span className="sync-time">
                         Last sync: {new Date(getSelectedMatch().last_synced_at).toLocaleTimeString()}
                       </span>
                     )}
-                    {getSelectedMatch()?.cricapi_match_id && (
-                      <span className="sync-id" title={getSelectedMatch().cricapi_match_id}>
-                        🔗 Linked
+                    {getSelectedMatch()?.cricapi_match_id ? (
+                      <span className="sync-id" title={`Cricbuzz ID: ${getSelectedMatch().cricapi_match_id}`}>
+                        🔗 ID: {getSelectedMatch().cricapi_match_id}
+                      </span>
+                    ) : (
+                      <span className="sync-id" style={{ color: 'var(--text-muted)' }}>
+                        ⚠️ No Cricbuzz ID
                       </span>
                     )}
                   </div>
@@ -357,7 +361,7 @@ function Admin() {
                     onClick={handleSyncMatch}
                     disabled={syncing}
                   >
-                    {syncing ? '🔄 Syncing...' : '📥 Sync from CricAPI'}
+                    {syncing ? '🔄 Syncing...' : '🏏 Sync Scorecard & Calculate Points'}
                   </button>
                   <button
                     className={`btn-auto-sync ${getSelectedMatch()?.auto_sync ? 'active' : ''}`}
