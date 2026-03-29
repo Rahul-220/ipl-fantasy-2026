@@ -7,6 +7,7 @@ import TeamPicker from './pages/TeamPicker';
 import Admin from './pages/Admin';
 import Leaderboard from './pages/Leaderboard';
 import Squads from './pages/Squads';
+import PointsSystem from './pages/PointsSystem';
 import './App.css';
 
 export const UserContext = createContext(null);
@@ -28,6 +29,7 @@ function NavBar() {
         <Link to="/squads" className={isActive('/squads')}>Squads</Link>
         <Link to="/leaderboard" className={isActive('/leaderboard')}>Leaderboard</Link>
         <Link to="/admin" className={isActive('/admin')}>Admin</Link>
+        <Link to="/points" className={isActive('/points')}>Points</Link>
       </div>
       {currentUser && (
         <div className="nav-user">
@@ -165,6 +167,7 @@ function App() {
               <Route path="/admin" element={<Admin />} />
               <Route path="/squads" element={<Squads />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/points" element={<PointsSystem />} />
             </Routes>
           </main>
         </div>

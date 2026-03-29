@@ -30,8 +30,42 @@ class Api::MatchesController < ApplicationController
       if match_started || entry.user_id == current_user_id
         base[:captain] = entry.captain ? { id: entry.captain.id, name: entry.captain.name } : nil
         base[:vice_captain] = entry.vice_captain ? { id: entry.vice_captain.id, name: entry.vice_captain.name } : nil
+
+        # Build player list with performance breakdown
+        performances = PlayerMatchPerformance.where(match_id: @match.id).index_by(&:ipl_player_id)
+
         base[:selected_players] = entry.selected_players.map { |p|
-          { id: p.id, name: p.name, role: p.role, ipl_team: { id: p.ipl_team_id, short_name: p.ipl_team.short_name } }
+          perf = performances[p.id]
+          multiplier = if entry.captain_id == p.id
+                         2.0
+                       elsif entry.vice_captain_id == p.id
+                         1.5
+                       else
+                         1.0
+                       end
+
+          player_data = {
+            id: p.id, name: p.name, role: p.role,
+            ipl_team: { id: p.ipl_team_id, short_name: p.ipl_team.short_name }
+          }
+
+          if perf
+            player_data[:performance] = {
+              runs_scored: perf.runs_scored, balls_faced: perf.balls_faced,
+              fours: perf.fours, sixes: perf.sixes,
+              is_duck: perf.is_duck, did_bat: perf.did_bat,
+              overs_bowled: perf.overs_bowled, maidens: perf.maidens,
+              runs_conceded: perf.runs_conceded, wickets: perf.wickets,
+              lbw_bowled_count: perf.lbw_bowled_count,
+              catches: perf.catches, stumpings: perf.stumpings,
+              direct_run_outs: perf.direct_run_outs, indirect_run_outs: perf.indirect_run_outs,
+              base_points: perf.fantasy_points.to_f,
+              multiplier: multiplier,
+              effective_points: (perf.fantasy_points.to_f * multiplier).round(1)
+            }
+          end
+
+          player_data
         }
         base[:team_visible] = true
       else
